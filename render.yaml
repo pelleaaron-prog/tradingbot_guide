@@ -1,0 +1,25 @@
+services:
+  - type: worker
+    name: binance-trading-bot
+    env: python
+    rootDir: bot
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    autoDeploy: false
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      # Set these manually in Render Dashboard > Environment:
+      # BINANCE_API_KEY
+      # BINANCE_SECRET
+      # TELEGRAM_TOKEN
+      # TELEGRAM_CHAT_ID
+      # SYMBOL=BTC/USDT
+      # TIMEFRAME=1h
+      # TRADE_AMOUNT_USDT=50
+      # POSITION_SIZE_PCT=0.20
+      # STOP_LOSS_PCT=0.05
+      # TAKE_PROFIT_PCT=0.10
+      # MAX_DAILY_LOSS_PCT=0.10
+      # DRY_RUN=true
+      # LOG_LEVEL=INFO

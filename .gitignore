@@ -30,8 +30,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — exclude secrets, keep example template
+.env
+bot/.env
+!.env.example
+!bot/.env.example
+
+# bot runtime files
+bot/logs/
+bot/cache_*.csv
+
+# claude internal
+.claude/
 
 # vercel
 .vercel
