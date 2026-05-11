@@ -1,0 +1,54 @@
+name: Trading Bot
+
+on:
+  schedule:
+    - cron: '5 * * * *'   # every hour at :05 (offset avoids GitHub queue congestion)
+  workflow_dispatch:        # manual trigger from GitHub UI
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # needed to commit state.json back
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: bot/requirements.txt
+
+      - name: Install dependencies
+        run: cd bot && pip install -r requirements.txt -q
+
+      - name: Run bot tick
+        env:
+          BINANCE_API_KEY:      ${{ secrets.BINANCE_API_KEY }}
+          BINANCE_SECRET:       ${{ secrets.BINANCE_SECRET }}
+          TELEGRAM_TOKEN:       ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          SYMBOL:               BTC/USDT
+          TIMEFRAME:            1h
+          TRADE_AMOUNT_USDT:    "50"
+          POSITION_SIZE_PCT:    "0.20"
+          STOP_LOSS_PCT:        "0.05"
+          TAKE_PROFIT_PCT:      "0.10"
+          MAX_DAILY_LOSS_PCT:   "0.10"
+          DRY_RUN:              "true"
+          LOG_LEVEL:            INFO
+          RUN_ONCE:             "true"
+        run: cd bot && python bot.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name  "trading-bot[bot]"
+          git config user.email "trading-bot@noreply"
+          git add bot/state.json
+          git diff --staged --quiet || git commit -m "chore: bot state update [skip ci]"
+          git push

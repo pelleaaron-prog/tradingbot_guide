@@ -3,6 +3,8 @@ bot.py — Main Bot Execution Loop
 Schedules and orchestrates the entire trading process.
 """
 
+import os
+import sys
 import time
 import schedule
 from datetime import datetime
@@ -14,8 +16,11 @@ import strategy
 from risk import RiskManager
 from logger import get_logger
 
-log = get_logger("bot")
+log  = get_logger("bot")
 risk = RiskManager()
+
+# RUN_ONCE=true → single tick then exit (used by GitHub Actions)
+RUN_ONCE = os.getenv("RUN_ONCE", "false").lower() == "true"
 
 
 def tick(binance):
@@ -118,39 +123,47 @@ def send_daily_report():
 def main():
     log.info("Starting Trading Bot...")
     config.validate()
-    
+
+    # Restore persisted state (position, daily P&L) — critical for GitHub Actions
+    risk.load_state()
+
     config_summary = config.summary()
     log.info(config_summary)
-    notifier.send_startup(config_summary)
+
+    if not RUN_ONCE:
+        notifier.send_startup(config_summary)
 
     try:
         binance_client = exchange.connect()
     except Exception as e:
         log.critical(f"Failed to connect to exchange: {e}")
         notifier.send_error(f"Failed to connect to exchange: {e}")
+        sys.exit(1)
+
+    if RUN_ONCE:
+        # GitHub Actions mode: run one tick, save state, exit
+        log.info("RUN_ONCE mode — executing single tick")
+        tick(binance_client)
+        risk.save_state()
+        log.info("Tick complete. State saved.")
         return
 
-    # Scheduling
-    # Run tick every hour at minute 0 (e.g., 10:00, 11:00)
+    # Continuous mode (Render.com / local)
     schedule.every().hour.at(":00").do(tick, binance=binance_client)
-    
-    # Daily summary at 23:55
     schedule.every().day.at("23:55").do(send_daily_report)
 
     log.info("Scheduler started. Waiting for next interval...")
-    
-    # Optional: Run immediately on startup for testing/first entry
-    # tick(binance_client)
 
     while True:
         try:
             schedule.run_pending()
             time.sleep(10)
         except KeyboardInterrupt:
-            log.info("Bot stopped manually by user.")
+            log.info("Bot stopped manually.")
+            risk.save_state()
             break
         except Exception as e:
-            log.error(f"Error in scheduler loop: {e}")
+            log.error(f"Scheduler error: {e}")
             time.sleep(60)
 
 if __name__ == "__main__":

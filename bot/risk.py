@@ -8,6 +8,8 @@ Rules:
   4. Kill switch: stop all trading if daily loss > MAX_DAILY_LOSS_PCT
 """
 
+import json
+import os
 from dataclasses import dataclass, field
 from datetime import date
 from logger import get_logger
@@ -18,6 +20,8 @@ from config import (
     MAX_DAILY_LOSS_PCT,
     TRADE_AMOUNT_USDT,
 )
+
+STATE_FILE = os.path.join(os.path.dirname(__file__), "state.json")
 
 log = get_logger("risk")
 
@@ -140,6 +144,49 @@ class RiskManager:
             self.killed = True
             return True
         return False
+
+    def save_state(self) -> None:
+        """Persist state to disk — required for GitHub Actions (ephemeral runner)."""
+        state = {
+            "has_position":   self.has_position,
+            "entry_price":    self.position.entry_price if self.position else 0.0,
+            "quantity":       self.position.quantity    if self.position else 0.0,
+            "usdt_spent":     self.position.usdt_spent  if self.position else 0.0,
+            "daily_pnl":      self.daily_pnl,
+            "daily_date":     str(self.daily_pnl_date),
+            "daily_trades":   self.daily_trade_count,
+            "daily_wins":     self.daily_wins,
+            "daily_losses":   self.daily_losses,
+            "killed":         self.killed,
+        }
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f, indent=2)
+        log.debug(f"State saved to {STATE_FILE}")
+
+    def load_state(self) -> None:
+        """Restore state from disk. Called at bot startup."""
+        if not os.path.exists(STATE_FILE):
+            log.info("No state file found — starting fresh.")
+            return
+        try:
+            with open(STATE_FILE) as f:
+                s = json.load(f)
+            self.daily_pnl        = s.get("daily_pnl", 0.0)
+            self.daily_pnl_date   = date.fromisoformat(s.get("daily_date", str(date.today())))
+            self.daily_trade_count= s.get("daily_trades", 0)
+            self.daily_wins       = s.get("daily_wins", 0)
+            self.daily_losses     = s.get("daily_losses", 0)
+            self.killed           = s.get("killed", False)
+            if s.get("has_position") and s.get("entry_price", 0) > 0:
+                self.position = Position(
+                    entry_price = s["entry_price"],
+                    quantity    = s["quantity"],
+                    usdt_spent  = s["usdt_spent"],
+                )
+            log.info(f"State loaded — position={'OPEN' if self.position else 'NONE'} "
+                     f"daily_pnl={self.daily_pnl:+.2f}")
+        except Exception as e:
+            log.error(f"Failed to load state: {e} — starting fresh.")
 
     @property
     def has_position(self) -> bool:
