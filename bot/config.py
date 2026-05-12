@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Exchange ────────────────────────────────────────────────
-BINANCE_API_KEY    = os.getenv("BINANCE_API_KEY", "")
-BINANCE_SECRET     = os.getenv("BINANCE_SECRET", "")
+BYBIT_API_KEY      = os.getenv("BYBIT_API_KEY", "")
+BYBIT_SECRET       = os.getenv("BYBIT_SECRET", "")
 
 # ── Trading Parameters ───────────────────────────────────────
 SYMBOL             = os.getenv("SYMBOL", "BTC/USDT")
@@ -44,16 +44,16 @@ LOG_LEVEL          = os.getenv("LOG_LEVEL", "INFO")
 def validate():
     """Check required config values are present."""
     errors = []
-    if not BINANCE_API_KEY:
-        errors.append("BINANCE_API_KEY is missing")
-    if not BINANCE_SECRET:
-        errors.append("BINANCE_SECRET is missing")
+    if not BYBIT_API_KEY:
+        errors.append("BYBIT_API_KEY is missing")
+    if not BYBIT_SECRET:
+        errors.append("BYBIT_SECRET is missing")
     if not TELEGRAM_TOKEN:
         errors.append("TELEGRAM_TOKEN is missing (required for alerts)")
     if not TELEGRAM_CHAT_ID:
         errors.append("TELEGRAM_CHAT_ID is missing")
     if TRADE_AMOUNT_USDT < 10:
-        errors.append(f"TRADE_AMOUNT_USDT={TRADE_AMOUNT_USDT} is below Binance minimum ($10)")
+        errors.append(f"TRADE_AMOUNT_USDT={TRADE_AMOUNT_USDT} is below minimum ($10)")
     if errors:
         raise ValueError("Config errors:\n" + "\n".join(f"  - {e}" for e in errors))
 
@@ -72,5 +72,5 @@ def summary():
 ║  RSI Period:  {RSI_PERIOD}
 ║  Stop Loss:   -{STOP_LOSS_PCT*100:.1f}%
 ║  Take Profit: +{TAKE_PROFIT_PCT*100:.1f}%
-║  API Key:     {BINANCE_API_KEY[:8]}...
+║  API Key:     {BYBIT_API_KEY[:8]}...
 ╚══════════════════════════════════════╝"""

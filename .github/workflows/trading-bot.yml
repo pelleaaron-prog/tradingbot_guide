@@ -29,8 +29,8 @@ jobs:
 
       - name: Run bot tick
         env:
-          BINANCE_API_KEY:      ${{ secrets.BINANCE_API_KEY }}
-          BINANCE_SECRET:       ${{ secrets.BINANCE_SECRET }}
+          BYBIT_API_KEY:        ${{ secrets.BYBIT_API_KEY }}
+          BYBIT_SECRET:         ${{ secrets.BYBIT_SECRET }}
           TELEGRAM_TOKEN:       ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
           SYMBOL:               BTC/USDT

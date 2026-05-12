@@ -1,5 +1,5 @@
 """
-exchange.py — Binance exchange wrapper via ccxt.
+exchange.py — Bybit exchange wrapper via ccxt.
 Handles: connection, data fetching, order execution, balance check.
 All errors are caught and logged — never crash the main bot.
 """
@@ -8,26 +8,25 @@ import ccxt
 import pandas as pd
 import time
 from logger import get_logger
-from config import BINANCE_API_KEY, BINANCE_SECRET, SYMBOL, TIMEFRAME, CANDLE_LIMIT, DRY_RUN
+from config import BYBIT_API_KEY, BYBIT_SECRET, SYMBOL, TIMEFRAME, CANDLE_LIMIT, DRY_RUN
 
 log = get_logger("exchange")
 
 
-def connect() -> ccxt.binance:
-    """Create and verify Binance connection."""
-    exchange = ccxt.binance({
-        "apiKey": BINANCE_API_KEY,
-        "secret": BINANCE_SECRET,
+def connect() -> ccxt.bybit:
+    """Create and verify Bybit connection."""
+    exchange = ccxt.bybit({
+        "apiKey": BYBIT_API_KEY,
+        "secret": BYBIT_SECRET,
         "options": {"defaultType": "spot"},
         "enableRateLimit": True,
     })
-    # Test connection
     exchange.load_markets()
-    log.info(f"Connected to Binance — {len(exchange.markets)} markets loaded")
+    log.info(f"Connected to Bybit — {len(exchange.markets)} markets loaded")
     return exchange
 
 
-def fetch_ohlcv(exchange: ccxt.binance, symbol: str = SYMBOL,
+def fetch_ohlcv(exchange: ccxt.bybit, symbol: str = SYMBOL,
                 timeframe: str = TIMEFRAME, limit: int = CANDLE_LIMIT) -> pd.DataFrame:
     """Fetch candlestick data and return as DataFrame."""
     try:
@@ -43,7 +42,7 @@ def fetch_ohlcv(exchange: ccxt.binance, symbol: str = SYMBOL,
         raise
 
 
-def get_balance_usdt(exchange: ccxt.binance) -> float:
+def get_balance_usdt(exchange: ccxt.bybit) -> float:
     """Return free USDT balance."""
     try:
         balance = exchange.fetch_balance()
@@ -55,7 +54,7 @@ def get_balance_usdt(exchange: ccxt.binance) -> float:
         raise
 
 
-def get_base_balance(exchange: ccxt.binance, symbol: str = SYMBOL) -> float:
+def get_base_balance(exchange: ccxt.bybit, symbol: str = SYMBOL) -> float:
     """Return free balance of the base asset (e.g., BTC for BTC/USDT)."""
     base = symbol.split("/")[0]
     try:
@@ -68,23 +67,22 @@ def get_base_balance(exchange: ccxt.binance, symbol: str = SYMBOL) -> float:
         raise
 
 
-def get_current_price(exchange: ccxt.binance, symbol: str = SYMBOL) -> float:
+def get_current_price(exchange: ccxt.bybit, symbol: str = SYMBOL) -> float:
     """Return latest ticker price."""
     ticker = exchange.fetch_ticker(symbol)
     return float(ticker["last"])
 
 
-def execute_buy(exchange: ccxt.binance, usdt_amount: float, symbol: str = SYMBOL) -> dict | None:
+def execute_buy(exchange: ccxt.bybit, usdt_amount: float, symbol: str = SYMBOL) -> dict | None:
     """
     Buy using market order for given USDT amount.
     In DRY_RUN mode: simulates the order without actually placing it.
     Returns order dict or simulated dict.
     """
     try:
-        price  = get_current_price(exchange, symbol)
-        qty    = usdt_amount / price
-        # Round quantity to exchange precision
-        qty    = float(exchange.amount_to_precision(symbol, qty))
+        price = get_current_price(exchange, symbol)
+        qty   = usdt_amount / price
+        qty   = float(exchange.amount_to_precision(symbol, qty))
 
         if DRY_RUN:
             log.info(f"[DRY RUN] BUY {qty:.6f} {symbol} @ ${price:,.2f} (${usdt_amount:.2f} USDT)")
@@ -100,7 +98,7 @@ def execute_buy(exchange: ccxt.binance, usdt_amount: float, symbol: str = SYMBOL
 
         order = exchange.create_market_buy_order(symbol, qty)
         log.info(f"BUY order placed: {qty:.6f} {symbol} @ ${price:,.2f} | ID={order['id']}")
-        time.sleep(1)  # brief pause for order to settle
+        time.sleep(1)
         return order
 
     except Exception as e:
@@ -108,14 +106,14 @@ def execute_buy(exchange: ccxt.binance, usdt_amount: float, symbol: str = SYMBOL
         return None
 
 
-def execute_sell(exchange: ccxt.binance, quantity: float, symbol: str = SYMBOL) -> dict | None:
+def execute_sell(exchange: ccxt.bybit, quantity: float, symbol: str = SYMBOL) -> dict | None:
     """
     Sell all held quantity using market order.
     In DRY_RUN mode: simulates without placing.
     """
     try:
-        price  = get_current_price(exchange, symbol)
-        qty    = float(exchange.amount_to_precision(symbol, quantity))
+        price = get_current_price(exchange, symbol)
+        qty   = float(exchange.amount_to_precision(symbol, quantity))
 
         if DRY_RUN:
             log.info(f"[DRY RUN] SELL {qty:.6f} {symbol} @ ${price:,.2f} (${qty * price:.2f} USDT)")
