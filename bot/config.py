@@ -9,9 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Exchange ────────────────────────────────────────────────
-BYBIT_API_KEY      = os.getenv("BYBIT_API_KEY", "")
-BYBIT_SECRET       = os.getenv("BYBIT_SECRET", "")
+# ── MetaTrader5 ─────────────────────────────────────────────
+MT5_LOGIN          = int(os.getenv("MT5_LOGIN", "0"))
+MT5_PASSWORD       = os.getenv("MT5_PASSWORD", "")
+MT5_SERVER         = os.getenv("MT5_SERVER", "")
 
 # ── Trading Parameters ───────────────────────────────────────
 SYMBOL             = os.getenv("SYMBOL", "BTC/USDT")
@@ -44,10 +45,12 @@ LOG_LEVEL          = os.getenv("LOG_LEVEL", "INFO")
 def validate():
     """Check required config values are present."""
     errors = []
-    if not BYBIT_API_KEY:
-        errors.append("BYBIT_API_KEY is missing")
-    if not BYBIT_SECRET:
-        errors.append("BYBIT_SECRET is missing")
+    if not MT5_LOGIN:
+        errors.append("MT5_LOGIN is missing")
+    if not MT5_PASSWORD:
+        errors.append("MT5_PASSWORD is missing")
+    if not MT5_SERVER:
+        errors.append("MT5_SERVER is missing")
     if not TELEGRAM_TOKEN:
         errors.append("TELEGRAM_TOKEN is missing (required for alerts)")
     if not TELEGRAM_CHAT_ID:
@@ -72,5 +75,6 @@ def summary():
 ║  RSI Period:  {RSI_PERIOD}
 ║  Stop Loss:   -{STOP_LOSS_PCT*100:.1f}%
 ║  Take Profit: +{TAKE_PROFIT_PCT*100:.1f}%
-║  API Key:     {BYBIT_API_KEY[:8]}...
+║  MT5 Login:   {MT5_LOGIN}
+║  MT5 Server:  {MT5_SERVER}
 ╚══════════════════════════════════════╝"""

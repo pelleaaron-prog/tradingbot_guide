@@ -1,9 +1,7 @@
 name: Trading Bot
 
 on:
-  schedule:
-    - cron: '5 * * * *'   # every hour at :05 (offset avoids GitHub queue congestion)
-  workflow_dispatch:        # manual trigger from GitHub UI
+  workflow_dispatch:        # manual trigger only — auto-schedule disabled
 
 jobs:
   tick:

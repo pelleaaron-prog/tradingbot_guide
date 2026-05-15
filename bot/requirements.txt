@@ -1,4 +1,4 @@
-ccxt==4.2.14
+MetaTrader5==5.0.4424
 pandas==2.2.3
 python-dotenv==1.0.1
 schedule==1.2.1

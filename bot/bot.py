@@ -23,13 +23,13 @@ risk = RiskManager()
 RUN_ONCE = os.getenv("RUN_ONCE", "false").lower() == "true"
 
 
-def tick(binance):
+def tick(mt5_client):
     """Main execution logic, run periodically by scheduler."""
     log.info(f"--- Tick: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---")
 
     try:
         # 1. Fetch current balances
-        usdt_balance = exchange.get_balance_usdt(binance)
+        usdt_balance = exchange.get_balance_usdt(mt5_client)
         log.debug(f"Available balance: ${usdt_balance:.2f} USDT")
 
         # 2. Check kill switch
@@ -38,7 +38,7 @@ def tick(binance):
             return
 
         # 3. Fetch OHLCV data & Current Price
-        df = exchange.fetch_ohlcv(binance)
+        df = exchange.fetch_ohlcv(mt5_client)
         current_price = df.iloc[-1]['close'] # Get latest closing price or use get_current_price
 
         # 4. Check exit conditions for existing positions
@@ -47,7 +47,7 @@ def tick(binance):
             if exit_reason:
                 # Close position
                 qty_to_sell = risk.position.quantity
-                order = exchange.execute_sell(binance, qty_to_sell)
+                order = exchange.execute_sell(mt5_client, qty_to_sell)
                 if order:
                     pnl_usdt, pnl_pct = risk.close_position(current_price)
                     notifier.send_sell(
@@ -70,7 +70,7 @@ def tick(binance):
             trade_amount = risk.calculate_trade_size(usdt_balance)
             
             if trade_amount >= 10.0:
-                order = exchange.execute_buy(binance, trade_amount)
+                order = exchange.execute_buy(mt5_client, trade_amount)
                 if order:
                     # Calculate actual received quantity and spent amount
                     # In DRY_RUN, we use simulated values from the order dict
@@ -134,22 +134,22 @@ def main():
         notifier.send_startup(config_summary)
 
     try:
-        binance_client = exchange.connect()
+        mt5_client = exchange.connect()
     except Exception as e:
         log.critical(f"Failed to connect to exchange: {e}")
         notifier.send_error(f"Failed to connect to exchange: {e}")
         sys.exit(1)
 
     if RUN_ONCE:
-        # GitHub Actions mode: run one tick, save state, exit
         log.info("RUN_ONCE mode — executing single tick")
-        tick(binance_client)
+        tick(mt5_client)
         risk.save_state()
+        exchange.shutdown(mt5_client)
         log.info("Tick complete. State saved.")
         return
 
-    # Continuous mode (Render.com / local)
-    schedule.every().hour.at(":00").do(tick, binance=binance_client)
+    # Continuous mode (local with MT5 terminal running)
+    schedule.every().hour.at(":00").do(tick, mt5_client=mt5_client)
     schedule.every().day.at("23:55").do(send_daily_report)
 
     log.info("Scheduler started. Waiting for next interval...")
@@ -161,6 +161,7 @@ def main():
         except KeyboardInterrupt:
             log.info("Bot stopped manually.")
             risk.save_state()
+            exchange.shutdown(mt5_client)
             break
         except Exception as e:
             log.error(f"Scheduler error: {e}")
